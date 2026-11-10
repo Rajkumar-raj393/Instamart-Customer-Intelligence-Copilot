@@ -1,0 +1,48 @@
+from pathlib import Path
+import pandas as pd
+
+raw_path = Path("data/raw/tickets.csv")
+processed_path = Path("data/processed/tickets_clean.csv")
+
+# Read original tickets
+df = pd.read_csv(raw_path)
+
+print("Original tickets:", df.shape)
+
+# Clean text columns
+for column in ["ticket_id", "customer_id", "order_id",
+               "text", "true_category"]:
+    df[column] = df[column].fillna("").astype(str).str.strip()
+
+# Remove tickets without ticket ID or customer ID
+df = df[
+    (df["ticket_id"] != "") &
+    (df["customer_id"] != "")
+]
+
+# Remove duplicate ticket IDs
+df = df.drop_duplicates(
+    subset="ticket_id", keep="first"
+)
+
+# Identify empty ticket text
+df["text_empty"] = df["text"].eq("")
+
+# Identify unusually long tickets
+df["text_word_count"] = df["text"].str.split().str.len()
+
+df["text_too_long"] = df["text_word_count"] > 300
+
+# Keep empty and long tickets for later triage.
+# Do not delete them because they are useful test cases.
+
+# Save cleaned tickets
+df.to_csv(processed_path, index=False)
+
+print("Cleaned tickets:", df.shape)
+print("Empty tickets:", df["text_empty"].sum())
+print("Very long tickets:", df["text_too_long"].sum())
+print("Duplicate ticket IDs:",
+      df["ticket_id"].duplicated().sum())
+
+print("\nTICKETS CLEANING COMPLETED!")

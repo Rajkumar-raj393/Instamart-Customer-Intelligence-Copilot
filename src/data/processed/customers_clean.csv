@@ -1,0 +1,44 @@
+
+from pathlib import Path
+import pandas as pd
+
+# File locations
+raw_path = Path("data/raw/customers.csv")
+processed_path = Path("data/processed/customers_clean.csv")
+
+# Read original customer data
+df = pd.read_csv(raw_path)
+
+print("Original customer data:", df.shape)
+
+# Clean city names
+df["city"] = df["city"].str.strip().str.title()
+
+# Clean gender values
+df["gender"] = df["gender"].astype("string").str.strip().str.lower()
+
+df["gender"] = df["gender"].replace({
+    "m": "Male",
+    "male": "Male",
+    "f": "Female",
+    "female": "Female"
+})
+
+# Convert age to numeric
+df["age"] = pd.to_numeric(df["age"], errors="coerce")
+
+# Keep only ages from 18 to 60
+df.loc[~df["age"].between(18, 60), "age"] = pd.NA
+
+# Check duplicate customer IDs
+print("Duplicate customer IDs:",
+      df["customer_id"].duplicated().sum())
+
+# Save cleaned data
+df.to_csv(processed_path, index=False)
+
+print("Cleaned customer data:", df.shape)
+print("Missing values after cleaning:")
+print(df.isnull().sum())
+
+print("\nCUSTOMER CLEANING COMPLETED!")

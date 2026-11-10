@@ -1,0 +1,44 @@
+from pathlib import Path
+import pandas as pd
+
+# File locations
+raw_path = Path("data/raw/products.csv")
+processed_path = Path("data/processed/products_clean.csv")
+
+# Read original products
+df = pd.read_csv(raw_path)
+
+print("Original products:", df.shape)
+
+# Clean text columns
+for column in ["product_id", "product_name", "category"]:
+    df[column] = df[column].astype("string").str.strip()
+
+# Convert price to numeric
+df["price_inr"] = pd.to_numeric(
+    df["price_inr"], errors="coerce"
+)
+
+# Remove records with missing essential information
+df = df.dropna(subset=[
+    "product_id", "product_name", "category", "price_inr"
+])
+
+# Keep valid positive prices
+df = df[df["price_inr"] > 0]
+
+# Remove duplicate product IDs
+df = df.drop_duplicates(
+    subset="product_id", keep="first"
+)
+
+# Save cleaned products
+df.to_csv(processed_path, index=False)
+
+print("Cleaned products:", df.shape)
+print("Duplicate product IDs:",
+      df["product_id"].duplicated().sum())
+print("Missing values:")
+print(df.isnull().sum())
+
+print("\nPRODUCTS CLEANING COMPLETED!")

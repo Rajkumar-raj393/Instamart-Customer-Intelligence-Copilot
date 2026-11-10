@@ -1,0 +1,35 @@
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+
+# Load customer features
+df = pd.read_csv("data/processed/customer_features.csv")
+
+# Select RFM columns
+features = ["recency_days", "frequency", "monetary"]
+
+# Fill missing values
+df[features] = df[features].fillna(0)
+
+# Scale the features
+scaler = StandardScaler()
+scaled_data = scaler.fit_transform(df[features])
+
+# Save scaled features
+scaled_df = pd.DataFrame(
+    scaled_data,
+    columns=features
+)
+
+scaled_df.insert(0, "customer_id", df["customer_id"])
+
+scaled_df.to_csv(
+    "data/processed/customer_features_scaled.csv",
+    index=False
+)
+
+print("CUSTOMER FEATURES SCALED")
+print("Total customers:", len(scaled_df))
+print("\nScaled data preview:")
+print(scaled_df.head())
+print("\nMean of scaled columns:")
+print(scaled_df[features].mean().round(3))

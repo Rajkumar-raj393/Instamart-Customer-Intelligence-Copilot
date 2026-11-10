@@ -1,0 +1,56 @@
+from pathlib import Path
+import pandas as pd
+
+# File locations
+raw_path = Path("data/raw/orders.csv")
+processed_path = Path("data/processed/orders_clean.csv")
+
+# Read original orders
+df = pd.read_csv(raw_path)
+
+print("Original orders:", df.shape)
+
+# Convert columns to correct data types
+df["order_ts"] = pd.to_datetime(df["order_ts"], errors="coerce")
+df["quantity"] = pd.to_numeric(df["quantity"], errors="coerce")
+df["discount_pct"] = pd.to_numeric(df["discount_pct"], errors="coerce")
+df["order_amount"] = pd.to_numeric(df["order_amount"], errors="coerce")
+df["delivery_minutes"] = pd.to_numeric(
+    df["delivery_minutes"], errors="coerce"
+)
+
+# Remove records without essential order information
+df = df.dropna(subset=[
+    "order_id", "customer_id", "product_id", "order_ts"
+])
+
+# Keep only valid order statuses
+df = df[df["status"].isin(["completed", "cancelled"])]
+
+# Sort by timestamp and keep the latest record per order
+df = df.sort_values("order_ts")
+df = df.drop_duplicates(subset="order_id", keep="last")
+
+# Remove invalid quantities, amounts and discounts
+df = df[
+    (df["quantity"] > 0) &
+    (df["order_amount"] > 0) &
+    (df["discount_pct"].between(0, 100))
+]
+
+# Negative delivery times are impossible; mark them missing
+df.loc[df["delivery_minutes"] < 0, "delivery_minutes"] = pd.NA
+
+# Cancelled orders should not have a delivery time
+df.loc[df["status"] == "cancelled", "delivery_minutes"] = pd.NA
+
+# Save cleaned orders
+df.to_csv(processed_path, index=False)
+
+print("Cleaned orders:", df.shape)
+print("Remaining duplicate order IDs:",
+      df["order_id"].duplicated().sum())
+print("Missing values:")
+print(df.isnull().sum())
+
+print("\nORDERS CLEANING COMPLETED!")

@@ -1,0 +1,41 @@
+import sqlite3
+import pandas as pd
+
+connection = sqlite3.connect("data/instamart.db")
+
+query = """
+SELECT
+    c.customer_id,
+    c.city,
+    c.age,
+    c.gender,
+    COUNT(o.order_id) AS frequency,
+    COALESCE(SUM(o.order_amount), 0) AS monetary,
+    COALESCE(AVG(o.order_amount), 0) AS avg_order_value,
+    CASE
+        WHEN MAX(o.order_ts) IS NULL THEN NULL
+        ELSE CAST(
+            julianday('2025-10-01') - julianday(MAX(o.order_ts))
+            AS INTEGER
+        )
+    END AS recency_days
+FROM customers c
+LEFT JOIN orders o
+    ON c.customer_id = o.customer_id
+    AND o.status = 'completed'
+GROUP BY
+    c.customer_id, c.city, c.age, c.gender
+ORDER BY c.customer_id
+"""
+
+df = pd.read_sql_query(query, connection)
+connection.close()
+
+df.to_csv("data/processed/customer_features.csv", index=False)
+
+print("CUSTOMER FEATURES CREATED")
+print("Total customers:", len(df))
+print("\nFirst 5 customers:")
+print(df.head())
+print("\nMissing values:")
+print(df.isnull().sum())
